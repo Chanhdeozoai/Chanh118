@@ -1,0 +1,321 @@
+-- Blox Fruits Auto-Farm Script (Level 1 to Max) - ULTIMATE VERSION
+
+-- **IMPORTANT NOTES (READ CAREFULLY):**
+-- 1.  Auto-Clicker: REQUIRED. Configure it properly.
+-- 2.  Roblox Graphics: Set to the ABSOLUTE LOWEST setting.
+-- 3.  Anti-Cheat: Roblox has anti-cheat. Use this script at your OWN RISK.  Botting can lead to a ban.
+-- 4.  Flying: Use responsibly. Excessive flying can be detected.
+-- 5.  Testing: Test thoroughly in a private server first.
+-- 6.  Updates: Blox Fruits updates may break this script.
+-- 7. Melee is highly recommend
+
+-- == Configuration (MUST-CONFIGURE SECTION) ==
+local AutoClickerKey = "F"  -- Change this to your auto-clicker key.
+local AttackDelay = 0.1     -- Adjust based on your ping/lag.
+local MobSearchRadius = 70   -- How far to search for enemies.
+local SafeMode = true        -- Teleport to safety when low on health.
+local SafeZoneIsland = "Starter Island" -- The script will try to find this automatically.
+local SafeZonePosition = Vector3.new(0, 0, 0)  -- *** REPLACE WITH YOUR SAFE ZONE COORDINATES! *** (Very Important)
+local LowHealthThreshold = 0.3  -- Teleport when health is below 30%.
+local LevelUpStats = {"Melee", "Defense", "Sword"}  -- Prioritize these stats.  "Melee" is BEST for this script.
+local AutoBuyBusoHaki = true  -- Automatically buy and enhance Buso Haki.
+local AutoBuyObservationHaki = true -- Automatically buys Observation Haki (needs to be unlocked first).
+local AutoEnhanceBuso = true
+local ObservationSkipLevel = 4
+local FlyKey = "Q"          -- Key to toggle flying.
+local FlySpeed = 50        -- Flying speed.
+local PullMobs = true       -- Enable/disable pulling mobs closer.
+local PullRadius = 20       -- Radius for pulling mobs.
+local PullWaitTime = 0.4    -- Time to wait after pulling, before attacking.
+local AttackHeight = 12     -- Height above the mob to attack from.
+
+local QuestLocations = {
+	["Marine Island"] = {QuestGiver = "Recruit Captain", LevelRequirement = 1, QuestIds = {"Recruit"}},
+	["Jungle"] = {QuestGiver = "Monkey King", LevelRequirement = 15, QuestIds = {"Monkey", "Gorilla"}},
+    ["Pirate Village"] = {QuestGiver = "Buggy the Clown", LevelRequirement = 30, QuestIds = {"Brute", "Buggy"}},
+    ["Desert"] = {QuestGiver = "Desert Officer", LevelRequirement = 60, QuestIds = {"Bandit", "Desert Officer"}},
+    ["Frozen Village"] = {QuestGiver = "Yeti", LevelRequirement = 90, QuestIds = {"Snowman", "Yeti"}},
+    ["Middle Town"] = {QuestGiver = "Experienced Captain", LevelRequirement = 100, QuestIds = {}},
+    ["Marine Fortress"] = {QuestGiver = "Vice Admiral", LevelRequirement = 120, QuestIds = {"Marine Captain", "Vice Admiral"}},
+    ["Prison"] = {QuestGiver = "Warden", LevelRequirement = 175, QuestIds = {"Prisoner", "Chief Warden", "Warden"}},
+    ["Colosseum"] = {QuestGiver = "Gladiator Captain", LevelRequirement = 225, QuestIds = {"Gladiator"}},
+	["Skylands"] = {QuestGiver = "Thunder God", LevelRequirement = 300, QuestIds = {"Shanda", "Royal Squad"}},
+	["Upper Skylands"] = {QuestGiver = "Emperor", LevelRequirement = 450, QuestIds = {"God Guard", "Emperor"}},
+	["Fountain City"] = {QuestGiver = "Water Knight", LevelRequirement = 625, QuestIds = {"Fishman", "Fishman Lord"}},
+	["Usoap's Island"] = {QuestGiver = "Usoap", LevelRequirement = 700, QuestIds = {}},
+	["Kingdom of Rose"] = {QuestGiver = "Swan", LevelRequirement = 700, QuestIds = {"Factory Staff", "Swan"}},
+	["Green Zone"] = {QuestGiver = "Vegeta", LevelRequirement = 875, QuestIds = {"Soldier", "Demi-Human", "Researcher"}},
+	["Graveyard"] = {QuestGiver = "Death King", LevelRequirement = 950, QuestIds = {"Zombie", "Skeleton", "Ghoul"}},
+	["Snow Mountain"] = {QuestGiver = "Ice Admiral", LevelRequirement = 1050, QuestIds = {"Snow Trooper", "Winter Warrior"}},
+	["Hot and Cold"] = {QuestGiver = "Master of Flames", LevelRequirement = 1100, QuestIds = {"Lava Pirate", "Magma Ninja", "Military Soldier", "Military Spy"}},
+	["Cursed Ship"] = {QuestGiver = "Cursed Captain", LevelRequirement = 1325, QuestIds = {"Cursed Spirit", "Deckhand", "Cursed Captain"}},
+	["Ice Castle"] = {QuestGiver = "Awakened Ice Admiral", LevelRequirement = 1350, QuestIds = {"Ice Warrior", "Arctic Warrior", "Snow Lurker", "Awakened Ice Admiral"}},
+	["Forgotten Island"] = {QuestGiver = "Ancient Monk", LevelRequirement = 1475, QuestIds = {"Torturer", "Warrior", "Soul Reaper", "Ancient Monk"}},
+	["Sea of Treats"] = {QuestGiver = "Cake Queen", LevelRequirement = 1775, QuestIds = {"Candy Rebel", "Pretty Cake", "Sweet Tooth", "Cake Queen"}},
+	["Floating Turtle"] = {QuestGiver = "Master of Auras", LevelRequirement = 1950, QuestIds = {"Pirate Millionaire", "Billionaire", "Beautiful Pirate", "Master of Auras"}},
+	["Port Town"] = {QuestGiver = "Captain Elephant", LevelRequirement = 2450, QuestIds = {"Musketeer", "Pistol Billionaire", "Rifle Billionaire", "Captain Elephant"}},
+    -- Add more islands and their quest givers HERE.
+}
+
+-- == Variables (DO NOT MODIFY) ==
+local Player = game.Players.LocalPlayer
+local Character = Player.Character or Player.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local Mouse = Player:GetMouse()
+local IsFarming = false
+local IsFlying = false
+local CurrentIsland = nil
+local CurrentQuest = nil
+local Debounce = false
+
+-- == Core Functions ==
+
+local function BuyAndEnhanceHaki()
+	local HakiColor = Player.HakiColor.Value
+	if HakiColor == "None" then return end
+
+    if AutoBuyBusoHaki then
+        local BusoManager = require(Player.PlayerGui.MainGui.BusoV2.BusoManager)
+        if BusoManager and BusoManager.BuyBuso then
+            BusoManager:BuyBuso()
+            wait(0.5)
+            if AutoEnhanceBuso and BusoManager.EnhanceBuso then
+               BusoManager:EnhanceBuso()
+            end
+        end
+    end
+
+    if AutoBuyObservationHaki then
+		local ObservationManager = require(Player.PlayerGui.MainGui.ObservationV2Frame.ObservationV2Manager)
+		if ObservationManager.CanSkip and ObservationManager.SkipObservationV2 then
+			if ObservationManager.SkipCount.Value < ObservationSkipLevel then
+				ObservationManager:SkipObservationV2()
+			end
+		end
+	end
+end
+
+local function GetCurrentIsland()
+    local PlayerGui = Player:WaitForChild("PlayerGui")
+    local CompassUI = PlayerGui:WaitForChild("CompassUI")
+	if CompassUI then
+		for i,v in pairs (CompassUI:GetChildren()) do
+			if v:IsA("TextLabel") and v.Text ~= "N" and v.Text ~= "E" and v.Text ~= "S" and v.Text ~= "W" then
+				if QuestLocations[v.Text] then
+                	return v.Text
+				end
+            end
+		end
+	end
+    return nil
+end
+
+local function FindQuestGiver(IslandName)
+    if QuestLocations[IslandName] then
+        local questGiverName = QuestLocations[IslandName].QuestGiver
+        for _, obj in pairs(workspace:GetChildren()) do
+            if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj.Name == questGiverName then
+                return obj
+            end
+        end
+    end
+    return nil
+end
+
+local function InteractWithQuestGiver(questGiver)
+    if questGiver and questGiver:FindFirstChild("Humanoid") then
+        local clickDetector = questGiver:FindFirstChild("ClickDetector")
+        if clickDetector then
+            fireclickdetector(clickDetector, 0)
+			wait(0.6)
+			local questUI = game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("QuestUI")
+			if questUI and questUI.MainFrame and questUI.MainFrame.ScrollingFrame then
+				for _, button in pairs(questUI.MainFrame.ScrollingFrame:GetChildren()) do
+					if button:IsA("TextButton") and button.Visible then
+						button:FireServer()
+						wait(0.3)
+						break
+					end
+				end
+			end
+        end
+    end
+end
+
+local function GetQuest(IslandName)
+    local questGiver = FindQuestGiver(IslandName)
+    if questGiver then
+        FlyTo(questGiver.HumanoidRootPart.Position)
+        InteractWithQuestGiver(questGiver)
+        CurrentQuest = QuestLocations[IslandName]
+    end
+end
+
+local function FindNearestEnemy()
+    local maxDistance = MobSearchRadius
+    local nearestEnemy = nil
+
+    if CurrentQuest and CurrentQuest.QuestIds then
+        for _, enemy in pairs(workspace:GetChildren()) do
+            if enemy:IsA("Model") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy ~= Character then
+                for _, questId in ipairs(CurrentQuest.QuestIds) do
+                    if string.find(enemy.Name, questId) then
+                        local distance = (Character.HumanoidRootPart.Position - enemy.HumanoidRootPart.Position).Magnitude
+                        if distance < maxDistance then
+                            maxDistance = distance
+                            nearestEnemy = enemy
+                        end
+                        break  -- Found a matching enemy, no need to check other questIds
+                    end
+                end
+            end
+        end
+    end
+    return nearestEnemy
+end
+
+local function PullNearbyMobs(targetPosition)
+    if not PullMobs or not CurrentQuest then return end
+
+    for _, enemy in pairs(workspace:GetChildren()) do
+        if enemy:IsA("Model") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy ~= Character then
+            for _, questId in ipairs(CurrentQuest.QuestIds) do
+                if string.find(enemy.Name, questId) then
+                    local distance = (targetPosition - enemy.HumanoidRootPart.Position).Magnitude
+                    if distance <= PullRadius then
+                        enemy.HumanoidRootPart.CFrame = targetPosition * CFrame.new(math.random(-3, 3), 0, math.random(-3, 3))
+                        break
+                    end
+                end
+            end
+        end
+    end
+    wait(PullWaitTime)
+end
+
+local function AttackTargetFromAbove()
+    if CurrentTarget and CurrentTarget:FindFirstChild("Humanoid") and CurrentTarget.Humanoid.Health > 0 then
+        local targetPosition = CurrentTarget.HumanoidRootPart.Position
+        local aboveTarget = targetPosition + Vector3.new(0, AttackHeight, 0)
+        FlyTo(aboveTarget)
+        Character.HumanoidRootPart.CFrame = CFrame.new(aboveTarget, targetPosition)
+
+        local meleeEquipped = EquipMelee()
+        if not meleeEquipped then
+            print("WARNING: No melee weapon found!")
+            -- Add fallback behavior here if needed (e.g., buy a melee weapon)
+        end
+
+        game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode[AutoClickerKey], false, game)
+        wait(AttackDelay)
+        game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode[AutoClickerKey], false, game)
+    else
+        CurrentTarget = nil
+    end
+end
+local function EquipMelee()
+    for _, tool in pairs(Player.Backpack:GetChildren()) do
+        if tool:IsA("Tool") and string.find(string.lower(tool.Name), "melee") then
+            Humanoid:EquipTool(tool)
+            return true
+        end
+    end
+    for _, tool in pairs(Character:GetChildren()) do
+        if tool:IsA("Tool") and string.find(string.lower(tool.Name), "melee") then
+             Humanoid:EquipTool(tool)
+            return true
+        end
+    end
+	return false
+end
+
+local function FlyTo(destination)
+    if not IsFlying then
+        ToggleFly()
+    end
+
+    local bodyGyro = Character.HumanoidRootPart:FindFirstChild("BodyGyro") or Instance.new("BodyGyro")
+    bodyGyro.MaxTorque = Vector3.new(400000, 400000, 400000)
+    bodyGyro.P = 10000
+    bodyGyro.Parent = Character.HumanoidRootPart
+
+    local bodyVelocity = Character.HumanoidRootPart:FindFirstChild("BodyVelocity") or Instance.new("BodyVelocity")
+    bodyVelocity.MaxForce = Vector3.new(400000, 400000, 400000)
+    bodyVelocity.P = 10000
+    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    bodyVelocity.Parent = Character.HumanoidRootPart
+
+    while (Character.HumanoidRootPart.Position - destination).Magnitude > 5 and IsFlying do
+        bodyVelocity.Velocity = (destination - Character.HumanoidRootPart.Position).Unit * FlySpeed
+        bodyGyro.CFrame = CFrame.new(Character.HumanoidRootPart.Position, destination)
+        wait()
+    end
+end
+
+local function ToggleFly()
+    IsFlying = not IsFlying
+    if IsFlying then
+        Humanoid.WalkSpeed = FlySpeed
+        Humanoid.JumpPower = FlySpeed
+        -- BodyGyro and BodyVelocity are created in FlyTo now
+    else
+        local bodyGyro = Character.HumanoidRootPart:FindFirstChild("BodyGyro")
+        local bodyVelocity = Character.HumanoidRootPart:FindFirstChild("BodyVelocity")
+        if bodyGyro then bodyGyro:Destroy() end
+        if bodyVelocity then bodyVelocity:Destroy() end
+        Humanoid.WalkSpeed = 16
+        Humanoid.JumpPower = 50
+    end
+end
+
+local function LevelUp()
+    local availablePoints = Player.StatRefundPoints.Value
+    local pointsPerStat = math.floor(availablePoints / #LevelUpStats)
+
+    for _, statName in ipairs(LevelUpStats) do
+        for _ = 1, pointsPerStat do
+            Player:WaitForChild("LevelUpStat"):FireServer(statName)
+            wait()
+        end
+    end
+    for _ = 1, Player.StatRefundPoints.Value do
+        Player:WaitForChild("LevelUpStat"):FireServer(LevelUpStats[1])
+        wait()
+    end
+end
+
+local function FarmLoop()
+    while IsFarming do
+        if SafeMode and Humanoid.Health / Humanoid.MaxHealth <= LowHealthThreshold then
+            print("Low health! Teleporting to safe zone...")
+            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, Player, SafeZonePosition)
+            wait(10)  -- Wait for health to regenerate
+        end
+
+        CurrentIsland = GetCurrentIsland()
+
+        if not CurrentIsland then
+            print("ERROR: Could not determine current island.  Stopping script.")
+            IsFarming = false
+            break
+        end
+
+        if QuestLocations[CurrentIsland] then
+            if Player.Levels.Value >= QuestLocations[CurrentIsland].LevelRequirement then
+                if not CurrentQuest  then
+                    GetQuest(CurrentIsland)
+                end
+				if CurrentQuest then
+                	CurrentTarget = FindNearestEnemy()
+				end
+
+                if CurrentTarget then
+                    if PullMobs then
+                        PullNearbyMobs(CurrentTarget.HumanoidRootPart.Position + Vector3.new(0, AttackHeight, 0))
+                    end
+                    AttackTargetFromAbove()
+                else
+					if CurrentQuest then
+                    	print("No enemies found for current quest. Retrying...")
+					end
+                    wait(2
