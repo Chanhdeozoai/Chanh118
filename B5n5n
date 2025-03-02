@@ -1,0 +1,50 @@
+local function FarmLoop()
+    IsFarming = true
+    while IsFarming do
+        print("[INFO] FarmLoop Running...")  
+
+        if not Character or not Character:FindFirstChild("HumanoidRootPart") then
+            print("[ERROR] Character or HumanoidRootPart missing!")
+            break
+        end
+
+        -- Get current island
+        CurrentIsland = GetCurrentIsland()
+        if not CurrentIsland then
+            print("[ERROR] Unable to determine current island.")
+            break
+        end
+        print("[INFO] Current Island: ", CurrentIsland)
+
+        -- Get quest if not already assigned
+        if not CurrentQuest or not CurrentQuestGiver then
+            GetQuest(CurrentIsland)
+            if not CurrentQuest then
+                print("[ERROR] No valid quest found!")
+                break
+            end
+            print("[INFO] Quest Retrieved: ", CurrentQuest)
+        end
+
+        -- Find nearest enemy
+        CurrentTarget = FindNearestEnemy()
+        if not CurrentTarget then
+            print("[WARNING] No enemies found, waiting...")
+            wait(1)
+            continue
+        end
+        print("[INFO] Target Found: ", CurrentTarget.Name)
+
+        -- Pull mobs if enabled
+        if PullMobs then
+            print("[INFO] Pulling nearby mobs...")
+            PullNearbyMobs(CurrentTarget.HumanoidRootPart.Position)
+        end
+
+        -- Attack target from above
+        AttackTargetFromAbove()
+
+        -- Wait before next attack cycle
+        wait(AttackDelay)
+    end
+end
