@@ -1,0 +1,76 @@
+-- Blox Fruits - Basic Auto Farm Script (FIXED and OPTIMIZED)
+
+-- == Configuration ==
+local AutoClickerKey = "F"  -- Your auto-clicker key
+local AttackDelay = 0.1     -- Adjust based on your ping
+local MobSearchRadius = 50  -- How far to search for enemies
+local SafeMode = true
+local SafeZonePosition = Vector3.new(0, 0, 0)  -- *** SET THIS TO A SAFE SPOT! ***
+
+-- == Variables (Do not change) ==
+local Player = game.Players.LocalPlayer
+local Character = nil  -- Initialize as nil
+local Humanoid = nil   -- Initialize as nil
+local Mouse = Player:GetMouse()
+
+-- == Functions ==
+
+local function FindNearestEnemy()
+    local maxDistance = MobSearchRadius
+    local nearestEnemy = nil
+
+    if Character and Character.PrimaryPart then -- Check if PrimaryPart exists
+        for _, enemy in pairs(workspace:GetChildren()) do
+            if enemy:IsA("Model") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy ~= Character then
+                local distance = (Character.PrimaryPart.Position - enemy:GetPivot().Position).Magnitude
+                if distance < maxDistance then
+                    maxDistance = distance
+                    nearestEnemy = enemy
+                end
+            end
+        end
+    end
+    return nearestEnemy
+end
+
+local function AttackTarget(target)
+    if target and target:FindFirstChild("Humanoid") and target.Humanoid.Health > 0 then
+		if Character and Character.PrimaryPart then -- Check if PrimaryPart exists
+        	Character:MoveTo(target:GetPivot().Position)
+		end
+        game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode[AutoClickerKey], false, game)
+        wait(AttackDelay)
+        game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode[AutoClickerKey], false, game)
+    end
+end
+
+-- == Main Loop ==
+
+while wait() do
+    -- Get character and humanoid ONLY IF they are nil or their parent is nil
+    if not Character or not Character.Parent then
+        Character = Player.Character or Player.CharacterAdded:Wait()
+    end
+    if Character and (not Humanoid or not Humanoid.Parent) then
+        Humanoid = Character:WaitForChild("Humanoid")
+    end
+
+    if Character and Humanoid then -- Check both before proceeding
+        if Humanoid.Health == 0 then
+            wait(5)  -- Wait for respawn
+        else
+            if SafeMode and Humanoid.Health / Humanoid.MaxHealth < 0.3 then  -- 30% health
+                print("Low health! Teleporting to safe zone...")
+                if Character and Character.PrimaryPart then
+					Character:MoveTo(SafeZonePosition) -- Use MoveTo for basic teleport
+                	wait(10)
+				end
+            end
+
+            local target = FindNearestEnemy()
+            if target then
+                AttackTarget(target)
+            end
+        end
+    end
+end
