@@ -1,0 +1,64 @@
+-- Blox Fruits - Basic Auto Farm Script
+
+-- == Configuration ==
+local AutoClickerKey = "F"  -- Your auto-clicker key
+local AttackDelay = 0.1     -- Adjust based on your ping
+local MobSearchRadius = 50  -- How far to search for enemies
+local SafeMode = true
+local SafeZonePosition = Vector3.new(0, 0, 0)  -- *** SET THIS TO A SAFE SPOT! ***
+
+-- == Variables (Do not change) ==
+local Player = game.Players.LocalPlayer
+local Character = Player.Character or Player.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local Mouse = Player:GetMouse()
+
+-- == Functions ==
+
+local function FindNearestEnemy()
+    local maxDistance = MobSearchRadius
+    local nearestEnemy = nil
+    for _, enemy in pairs(workspace:GetChildren()) do
+        if enemy:IsA("Model") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy ~= Character then
+            local distance = (Character.HumanoidRootPart.Position - enemy.HumanoidRootPart.Position).Magnitude
+            if distance < maxDistance then
+                maxDistance = distance
+                nearestEnemy = enemy
+            end
+        end
+    end
+    return nearestEnemy
+end
+
+local function AttackTarget(target)
+    if target and target:FindFirstChild("Humanoid") and target.Humanoid.Health > 0 then
+        Humanoid:MoveTo(target.HumanoidRootPart.Position)
+        game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode[AutoClickerKey], false, game)
+        wait(AttackDelay)
+        game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode[AutoClickerKey], false, game)
+    end
+end
+
+-- == Main Loop ==
+
+while wait() do
+    if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+        Character = Player.Character
+        Humanoid = Character:FindFirstChild("Humanoid")
+
+        if Humanoid.Health == 0 then
+            wait(5)  -- Wait for respawn
+        else
+            if SafeMode and Humanoid.Health / Humanoid.MaxHealth < 0.3 then  -- 30% health threshold
+                print("Low health! Teleporting to safe zone...")
+                Character:MoveTo(SafeZonePosition)
+                wait(10)  -- Wait for health regen
+            end
+
+            local target = FindNearestEnemy()
+            if target then
+                AttackTarget(target)
+            end
+        end
+    end
+end
