@@ -1,0 +1,86 @@
+-- Function to determine the current island
+local function GetCurrentIsland()
+    local Player = game.Players.LocalPlayer
+    local Character = Player.Character or Player.CharacterAdded:Wait()
+    
+    if Character and Character:FindFirstChild("HumanoidRootPart") then
+        local Position = Character.HumanoidRootPart.Position
+        for IslandName, Data in pairs(QuestLocations) do
+            if (Position - Data.Position).Magnitude < Data.Radius then
+                return IslandName
+            end
+        end
+    end
+    return nil
+end
+
+-- Auto Clicker Fix
+local function AutoClick()
+    local Player = game.Players.LocalPlayer
+    local Character = Player.Character or Player.CharacterAdded:Wait()
+
+    if Character then
+        local Tool = Character:FindFirstChildOfClass("Tool")
+        if Tool then
+            Tool:Activate()
+        end
+    end
+end
+
+-- Improved Fly Function Using TweenService
+local TweenService = game:GetService("TweenService")
+
+local function FlyTo(Destination)
+    local Player = game.Players.LocalPlayer
+    local Character = Player.Character or Player.CharacterAdded:Wait()
+    
+    if Character and Character:FindFirstChild("HumanoidRootPart") then
+        local RootPart = Character.HumanoidRootPart
+        local Distance = (RootPart.Position - Destination).Magnitude
+        local TweenInfo = TweenInfo.new(Distance / FlySpeed, Enum.EasingStyle.Linear)
+        local Goal = {Position = Destination}
+        local Tween = TweenService:Create(RootPart, TweenInfo, Goal)
+        Tween:Play()
+    end
+end
+
+-- Fix GetQuest to support ProximityPrompt
+local function InteractWithQuestGiver(QuestGiver)
+    if QuestGiver then
+        local humanoid = QuestGiver:FindFirstChild("Humanoid")
+        if humanoid then
+            local prompt = QuestGiver:FindFirstChildWhichIsA("ProximityPrompt", true)
+            if prompt then
+                fireproximityprompt(prompt)
+                wait(1)
+            end
+        end
+    end
+end
+
+-- Improved Farm Loop with Level Check
+local function FarmLoop()
+    local Player = game.Players.LocalPlayer
+    local Character = Player.Character or Player.CharacterAdded:Wait()
+    
+    if not Character or not Character:FindFirstChild("HumanoidRootPart") then return end
+
+    local CurrentIsland = GetCurrentIsland()
+    local PlayerLevel = Player:FindFirstChild("Data") and Player.Data:FindFirstChild("Level") and Player.Data.Level.Value or 1
+
+    if CurrentIsland and QuestLocations[CurrentIsland] then
+        if PlayerLevel >= QuestLocations[CurrentIsland].LevelRequirement then
+            if not CurrentQuest or not CurrentQuestGiver or not CurrentQuestGiver:FindFirstChild("Humanoid") then
+                GetQuest(CurrentIsland)
+            end
+        end
+    end
+end
+
+-- Start farming when toggled
+local function StartFarming()
+    while IsFarming do
+        FarmLoop()
+        wait(1)
+    end
+end
